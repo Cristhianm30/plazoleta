@@ -17,6 +17,10 @@ public class RestaurantRepositoryimpl implements RestaurantRepository {
         return jpaRestaurantRepository.save(restaurant);
     }
 
+    @Override
+    public Optional<Restaurant> findByUserId(Long userId) {
+        return jpaRestaurantRepository.findByUserId(userId);
+    }
 
     @Override
     public Optional<Restaurant> findByName(String name) {

@@ -3,9 +3,9 @@ package com.plaza.plazoleta.application.service;
 import com.plaza.plazoleta.application.exception.InvalidOwnerException;
 import com.plaza.plazoleta.domain.model.Restaurant;
 import com.plaza.plazoleta.domain.port.RestaurantRepository;
-import com.plaza.plazoleta.domain.port.OwnerServiceClient;
+import com.plaza.plazoleta.domain.port.UserServiceClient;
 import com.plaza.plazoleta.domain.service.RestaurantService;
-import com.plaza.plazoleta.infraestructure.dto.OwnerDto;
+import com.plaza.plazoleta.infraestructure.dto.UserDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -13,31 +13,38 @@ import org.springframework.stereotype.Service;
 @Service
 public class RestaurantServiceImpl implements RestaurantService {
 
-    @Autowired
-    private RestaurantRepository restaurantRepository;
+    private final RestaurantRepository restaurantRepository;
+    private final UserServiceClient userServiceClient;
 
     @Autowired
-    private OwnerServiceClient ownerServiceClient;
+    public RestaurantServiceImpl(
+            RestaurantRepository restaurantRepository,
+            UserServiceClient userServiceClient
+    ) {
+        this.restaurantRepository = restaurantRepository;
+        this.userServiceClient = userServiceClient;
+    }
 
-    @Value("${owner.role.id}")
-    private Long ownerRoleId;
+    @Value("${owner.role.name}")
+    private String ownerRoleName;
 
     @Override
     public Restaurant createRestaurant(Restaurant restaurant) {
 
-        validateRol_Id(restaurant);
+        validateRol(restaurant);
         validateNit(restaurant);
         validateCellPhone(restaurant);
         validateName(restaurant);
+        validateRequiredFields(restaurant);
 
         return restaurantRepository.save(restaurant);
     }
 
-    private void validateRol_Id(Restaurant restaurant) {
+    private void validateRol(Restaurant restaurant) {
 
-        OwnerDto owner = ownerServiceClient.getOwnerById(restaurant.getUserId());
+        UserDto owner = userServiceClient.getUserById(restaurant.getUserId());
 
-        if (!owner.getRole().equals(ownerRoleId)) {
+        if (!owner.getRole().equals(ownerRoleName)) {
             throw new InvalidOwnerException("El usuario no tiene el rol de propietario");
         }
 
@@ -68,6 +75,17 @@ public class RestaurantServiceImpl implements RestaurantService {
 
         if (name == null || name.matches("^\\d+$")) {
             throw new RuntimeException("El nombre es requerido");
+        }
+    }
+
+    private void validateRequiredFields(Restaurant restaurant) {
+        if (restaurant.getName() == null || restaurant.getName().isBlank() ||
+                restaurant.getNit() == null || restaurant.getNit().isBlank() ||
+                restaurant.getAddress() == null || restaurant.getAddress().isBlank() ||
+                restaurant.getCellPhone() == null || restaurant.getCellPhone().isBlank() ||
+                restaurant.getUrlLogo() == null || restaurant.getUrlLogo().isBlank() ||
+                restaurant.getUserId() == null) {
+            throw new IllegalArgumentException("Todos los campos son obligatorios: nombre, NIT, dirección, teléfono, URL del logo y ID del usuario.");
         }
     }
 }

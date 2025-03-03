@@ -6,6 +6,6 @@ import java.util.Optional;
 
 public interface RestaurantRepository {
     Restaurant save(Restaurant restaurant);
-
     Optional<Restaurant> findByName(String name);
+    Optional<Restaurant> findByUserId(Long userId);
 }
