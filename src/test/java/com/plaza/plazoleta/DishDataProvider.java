@@ -3,6 +3,7 @@ package com.plaza.plazoleta;
 import com.plaza.plazoleta.domain.model.Category;
 import com.plaza.plazoleta.domain.model.Dish;
 import com.plaza.plazoleta.domain.model.Restaurant;
+import com.plaza.plazoleta.infraestructure.dto.StatusDishDto;
 
 public class DishDataProvider {
 
@@ -13,6 +14,7 @@ public class DishDataProvider {
                 .price(1599)
                 .description("Pizza clásica con mozzarella y albahaca")
                 .imageUrl("http://example.com/pizza.jpg")
+                .active(true)
                 .category(validCategoryMock()) // Usar método interno
                 .restaurant(validRestaurantMock()) // Usar método interno
                 .build();
@@ -38,6 +40,7 @@ public class DishDataProvider {
         dish.setDescription(null);
         return dish;
     }
+
 
 
     public static Category validCategoryMock() {

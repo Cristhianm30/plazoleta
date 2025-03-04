@@ -7,6 +7,7 @@ import com.plaza.plazoleta.domain.model.Dish;
 
 import com.plaza.plazoleta.domain.service.DishService;
 
+import com.plaza.plazoleta.infraestructure.dto.StatusDishDto;
 import com.plaza.plazoleta.infraestructure.dto.UpdateDishDto;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -39,5 +40,15 @@ public class DishController {
 
             Dish updatedDish = dishService.updateDish(id,request);
             return ResponseEntity.ok(updatedDish);
+    }
+
+    @PatchMapping("/status/{id}")
+    @PreAuthorize("hasRole('PROPIETARIO')")
+    public ResponseEntity<Dish> updateDishStatus(
+            @PathVariable Long id,
+            @RequestBody StatusDishDto statusDishDto
+    ) {
+        Dish updatedDish = dishService.updateDishStatus(id, statusDishDto);
+        return ResponseEntity.ok(updatedDish);
     }
 }

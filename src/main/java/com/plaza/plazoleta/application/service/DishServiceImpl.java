@@ -14,6 +14,7 @@ import com.plaza.plazoleta.domain.port.RestaurantRepository;
 import com.plaza.plazoleta.domain.port.UserServiceClient;
 import com.plaza.plazoleta.domain.service.DishService;
 import com.plaza.plazoleta.infraestructure.config.JwtUtils;
+import com.plaza.plazoleta.infraestructure.dto.StatusDishDto;
 import com.plaza.plazoleta.infraestructure.dto.UpdateDishDto;
 import com.plaza.plazoleta.infraestructure.dto.UserDto;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,16 +49,12 @@ public class DishServiceImpl implements DishService {
 
     @Override
     public Dish createDish(Dish dish) {
-        // 1. Obtener el token del contexto de seguridad y extraer el ID del usuario
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String token = ((String) authentication.getCredentials());
-        Long userId = jwtUtils.extractUserId(token.replace("Bearer ", "")); // Eliminar "Bearer " si es necesario
 
-        // 2. Validar que el usuario es propietario
-        UserDto user = userServiceClient.getUserById(userId);
-        if (!"PROPIETARIO".equals(user.getRole())) {
-            throw new UnauthorizedException("Solo los propietarios pueden crear platos");
-        }
+        // 1. Obtener usuario autenticado
+        Long userId = getAuthenticatedUserId();
+
+        //2. Validar que el usuario sea propietario
+        validateUserIsOwner(userId);
 
         // 3. Obtener el restaurante asociado al propietario
         Restaurant restaurant = restaurantRepository.findByUserId(userId)
@@ -82,39 +79,65 @@ public class DishServiceImpl implements DishService {
 
     @Override
     public Dish updateDish(Long dishId, UpdateDishDto request) {
-        // 1. Validar que el plato exista
-        Dish existingDish = dishRepository.findById(dishId)
-                .orElseThrow(() -> new NotFoundException("Plato no encontrado"));
 
-        // 2. Obtener usuario autenticado
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String token = (String) authentication.getCredentials();
-        Long userId = jwtUtils.extractUserId(token.replace("Bearer ", ""));
+        Long userId = getAuthenticatedUserId();
 
-        // 3. Validar que el usuario es propietario del restaurante asociado al plato
-        UserDto user = userServiceClient.getUserById(userId);
-        if (!"PROPIETARIO".equals(user.getRole())) {
-            throw new UnauthorizedException("Solo los propietarios pueden modificar platos");
-        }
+        Dish dish = validateAndGetDish(dishId, userId);
 
-        // 4. Verificar que el usuario es dueño del restaurante del plato
-        Restaurant restaurant = existingDish.getRestaurant();
-        if (!restaurant.getUserId().equals(userId)) {
-            throw new UnauthorizedException("No tienes permiso para modificar este plato");
-        }
-
-        // 5. Actualizar campos permitidos
         if (request.getDescription() != null && !request.getDescription().isBlank()) {
-            existingDish.setDescription(request.getDescription());
+            dish.setDescription(request.getDescription());
         }
         if (request.getPrice() != null) {
-            validatePrice(request.getPrice()); // ✅ Validación reutilizable
-            existingDish.setPrice(request.getPrice());
+            validatePrice(request.getPrice()); //
+            dish.setPrice(request.getPrice());
         }
 
-        // 6. Guardar cambios
-        return dishRepository.save(existingDish);
+
+        return dishRepository.save(dish);
     }
+
+    @Override
+    public Dish updateDishStatus(Long dishId, StatusDishDto statusDishDto) {
+
+        Long userId = getAuthenticatedUserId();
+
+        Dish dish = validateAndGetDish(dishId, userId);
+
+        if (statusDishDto.getActive() != null) {
+            dish.setActive(statusDishDto.getActive());
+        }
+
+        return dishRepository.save(dish);
+    }
+
+    private Long getAuthenticatedUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String token = (String) authentication.getCredentials();
+        return jwtUtils.extractUserId(token.replace("Bearer ", ""));
+    }
+
+    private void validateUserIsOwner(Long userId) {
+        UserDto user = userServiceClient.getUserById(userId);
+        if (!"PROPIETARIO".equals(user.getRole())) {
+            throw new UnauthorizedException("Acción restringida a propietarios");
+        }
+    }
+
+    private void validateRestaurantOwnership(Long userId, Restaurant restaurant) {
+        if (!restaurant.getUserId().equals(userId)) {
+            throw new UnauthorizedException("No eres dueño de este restaurante");
+        }
+    }
+
+    private Dish validateAndGetDish(Long dishId, Long userId) {
+        Dish dish = dishRepository.findById(dishId)
+                .orElseThrow(() -> new NotFoundException("Plato no encontrado"));
+        validateUserIsOwner(userId);
+        validateRestaurantOwnership(userId, dish.getRestaurant());
+        return dish;
+    }
+
+
 
 
     private void validateDish(Dish dish) {

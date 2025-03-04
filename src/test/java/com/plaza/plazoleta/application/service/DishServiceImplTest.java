@@ -1,6 +1,8 @@
 package com.plaza.plazoleta.application.service;
 
 import com.plaza.plazoleta.DishDataProvider;
+import com.plaza.plazoleta.UserDataProvider;
+import com.plaza.plazoleta.application.exception.InvalidOwnerException;
 import com.plaza.plazoleta.application.exception.InvalidPriceException;
 import com.plaza.plazoleta.application.exception.NotFoundException;
 import com.plaza.plazoleta.application.exception.UnauthorizedException;
@@ -12,6 +14,7 @@ import com.plaza.plazoleta.domain.port.DishRepository;
 import com.plaza.plazoleta.domain.port.RestaurantRepository;
 import com.plaza.plazoleta.domain.port.UserServiceClient;
 import com.plaza.plazoleta.infraestructure.config.JwtUtils;
+import com.plaza.plazoleta.infraestructure.dto.StatusDishDto;
 import com.plaza.plazoleta.infraestructure.dto.UpdateDishDto;
 import com.plaza.plazoleta.infraestructure.dto.UserDto;
 import org.junit.jupiter.api.BeforeEach;
@@ -195,4 +198,73 @@ public class DishServiceImplTest {
         assertEquals(2000, result.getPrice());
         verify(dishRepository).save(existingDish);
     }
+
+    @Test
+    void updateDishStatus_Success() {
+        // Configurar mocks
+        StatusDishDto request = new StatusDishDto();
+        request.setActive(false);
+
+        Dish existingDish = DishDataProvider.validDishMock();
+        UserDto user = new UserDto();
+        user.setRole("PROPIETARIO");
+        Restaurant restaurant = existingDish.getRestaurant();
+        restaurant.setUserId(USER_ID); // Coincide con el usuario autenticado
+
+        when(dishRepository.findById(1L)).thenReturn(Optional.of(existingDish));
+        when(userServiceClient.getUserById(USER_ID)).thenReturn(user);
+        when(dishRepository.save(any(Dish.class))).thenReturn(existingDish);
+
+        // Ejecutar
+        Dish result = dishService.updateDishStatus(1L, request);
+
+        // Verificar
+        assertFalse(result.getActive());
+        verify(dishRepository).save(existingDish);
+    }
+
+    @Test
+    void updateDishStatus_UserNotOwner() {
+        StatusDishDto request = new StatusDishDto();
+        request.setActive(true);
+
+        Dish existingDish = DishDataProvider.validDishMock();
+        UserDto user = new UserDto();
+        user.setRole("CLIENTE"); // Rol inválido
+
+        when(dishRepository.findById(1L)).thenReturn(Optional.of(existingDish));
+        when(userServiceClient.getUserById(USER_ID)).thenReturn(user);
+
+        assertThrows(UnauthorizedException.class,
+                () -> dishService.updateDishStatus(1L, request));
+    }
+
+    @Test
+    void updateDishStatus_DishFromOtherRestaurant() {
+        StatusDishDto request = new StatusDishDto();
+        request.setActive(true);
+
+        Dish existingDish = DishDataProvider.validDishMock();
+        Restaurant otherRestaurant = existingDish.getRestaurant();
+        otherRestaurant.setUserId(999L); // ID diferente al usuario autenticado
+
+        when(dishRepository.findById(1L)).thenReturn(Optional.of(existingDish));
+        when(userServiceClient.getUserById(USER_ID)).thenReturn(UserDataProvider.validOwnerMock());
+
+        assertThrows(UnauthorizedException.class,
+                () -> dishService.updateDishStatus(1L, request));
+    }
+
+    @Test
+    void updateDishStatus_DishNotFound() {
+        StatusDishDto request = new StatusDishDto();
+        request.setActive(true);
+
+        when(dishRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class,
+                () -> dishService.updateDishStatus(1L, request));
+    }
+
+
 }

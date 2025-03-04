@@ -40,7 +40,7 @@ public class SecurityConfig {
                                 "/actuator/health"
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/dish").hasRole("PROPIETARIO")
-                        .requestMatchers(HttpMethod.PATCH, "/dish/***").hasRole("PROPIETARIO")
+                        .requestMatchers(HttpMethod.PATCH, "/dish/**").hasRole("PROPIETARIO")
                         .requestMatchers(HttpMethod.POST,"/restaurant").hasRole("ADMINISTRADOR")
                         // Restringir todos los demás endpoints
                         .anyRequest().authenticated()
