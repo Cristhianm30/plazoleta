@@ -9,5 +9,5 @@ import java.util.Optional;
 
 @Repository
 public interface JpaDishRepository extends JpaRepository<Dish, Long> {
-    Optional<Dish> findByName(String name);
+
 }

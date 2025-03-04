@@ -14,6 +14,7 @@ import com.plaza.plazoleta.domain.port.RestaurantRepository;
 import com.plaza.plazoleta.domain.port.UserServiceClient;
 import com.plaza.plazoleta.domain.service.DishService;
 import com.plaza.plazoleta.infraestructure.config.JwtUtils;
+import com.plaza.plazoleta.infraestructure.dto.UpdateDishDto;
 import com.plaza.plazoleta.infraestructure.dto.UserDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -79,10 +80,46 @@ public class DishServiceImpl implements DishService {
         return dishRepository.save(dish);
     }
 
+    @Override
+    public Dish updateDish(Long dishId, UpdateDishDto request) {
+        // 1. Validar que el plato exista
+        Dish existingDish = dishRepository.findById(dishId)
+                .orElseThrow(() -> new NotFoundException("Plato no encontrado"));
+
+        // 2. Obtener usuario autenticado
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String token = (String) authentication.getCredentials();
+        Long userId = jwtUtils.extractUserId(token.replace("Bearer ", ""));
+
+        // 3. Validar que el usuario es propietario del restaurante asociado al plato
+        UserDto user = userServiceClient.getUserById(userId);
+        if (!"PROPIETARIO".equals(user.getRole())) {
+            throw new UnauthorizedException("Solo los propietarios pueden modificar platos");
+        }
+
+        // 4. Verificar que el usuario es dueño del restaurante del plato
+        Restaurant restaurant = existingDish.getRestaurant();
+        if (!restaurant.getUserId().equals(userId)) {
+            throw new UnauthorizedException("No tienes permiso para modificar este plato");
+        }
+
+        // 5. Actualizar campos permitidos
+        if (request.getDescription() != null && !request.getDescription().isBlank()) {
+            existingDish.setDescription(request.getDescription());
+        }
+        if (request.getPrice() != null) {
+            validatePrice(request.getPrice()); // ✅ Validación reutilizable
+            existingDish.setPrice(request.getPrice());
+        }
+
+        // 6. Guardar cambios
+        return dishRepository.save(existingDish);
+    }
+
 
     private void validateDish(Dish dish) {
         validateRequiredFields(dish);
-        validatePrice(dish);
+        validatePrice(dish.getPrice());
     }
 
     private void validateRequiredFields(Dish dish) {
@@ -95,9 +132,9 @@ public class DishServiceImpl implements DishService {
         }
     }
 
-    private void validatePrice(Dish dish) {
-        if (dish.getPrice() <= 0) {
-            throw new InvalidPriceException("El precio debe ser mayor a cero");
+    private void validatePrice(Integer price) {
+        if (price == null || price <= 0) {
+            throw new InvalidPriceException("El precio debe ser entero mayor a cero");
         }
     }
 }

@@ -11,7 +11,7 @@ public class RestaurantDataProvider {
                 .address("Calle 123")
                 .cellPhone("+573001234567")
                 .urlLogo("http://example.com/logo.png")
-                .userId(1L)
+                .userId(2L)
                 .build();
     }
 
@@ -22,7 +22,7 @@ public class RestaurantDataProvider {
                 .address("Calle 123")
                 .cellPhone("+573001234567")
                 .urlLogo("http://example.com/logo.png")
-                .userId(1L)
+                .userId(2L)
                 .build();
     }
 
@@ -33,7 +33,7 @@ public class RestaurantDataProvider {
                 .address("Calle 123")
                 .cellPhone("+573001234567")
                 .urlLogo("http://example.com/logo.png")
-                .userId(1L)
+                .userId(2L)
                 .build();
     }
 
@@ -44,7 +44,7 @@ public class RestaurantDataProvider {
                 .address("Calle 123")
                 .cellPhone("+57300123456789") // Teléfono inválido (más de 13 caracteres)
                 .urlLogo("http://example.com/logo.png")
-                .userId(1L)
+                .userId(2L)
                 .build();
     }
 
@@ -54,7 +54,7 @@ public class RestaurantDataProvider {
                 .nit("1234567890")
                 .cellPhone("+573001234567")
                 .urlLogo("http://example.com/logo.png")
-                .userId(1L)
+                .userId(2L)
                 .build(); // Falta la dirección
     }
 }

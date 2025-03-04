@@ -17,4 +17,9 @@ public class DishRepositoryImpl implements DishRepository {
     public Dish save(Dish dish) {
         return jpaDishRepository.save(dish);
     }
+
+    @Override
+    public Optional<Dish> findById(Long id) {
+        return jpaDishRepository.findById(id);
+    }
 }

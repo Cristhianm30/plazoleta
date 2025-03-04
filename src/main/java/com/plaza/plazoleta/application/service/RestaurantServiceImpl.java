@@ -1,13 +1,17 @@
 package com.plaza.plazoleta.application.service;
 
 import com.plaza.plazoleta.application.exception.InvalidOwnerException;
+import com.plaza.plazoleta.application.exception.UnauthorizedException;
 import com.plaza.plazoleta.domain.model.Restaurant;
 import com.plaza.plazoleta.domain.port.RestaurantRepository;
 import com.plaza.plazoleta.domain.port.UserServiceClient;
 import com.plaza.plazoleta.domain.service.RestaurantService;
+import com.plaza.plazoleta.infraestructure.config.JwtUtils;
 import com.plaza.plazoleta.infraestructure.dto.UserDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,14 +19,17 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     private final RestaurantRepository restaurantRepository;
     private final UserServiceClient userServiceClient;
+    private final JwtUtils jwtUtils;
 
     @Autowired
     public RestaurantServiceImpl(
             RestaurantRepository restaurantRepository,
-            UserServiceClient userServiceClient
+            UserServiceClient userServiceClient,
+            JwtUtils jwtUtils
     ) {
         this.restaurantRepository = restaurantRepository;
         this.userServiceClient = userServiceClient;
+        this.jwtUtils = jwtUtils;
     }
 
     @Value("${owner.role.name}")
@@ -30,6 +37,17 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     @Override
     public Restaurant createRestaurant(Restaurant restaurant) {
+
+        // 1. Obtener el token del contexto de seguridad y extraer el ID del usuario
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String token = ((String) authentication.getCredentials());
+        Long userId = jwtUtils.extractUserId(token.replace("Bearer ", "")); // Eliminar "Bearer " si es necesario
+
+        // 2. Validar que el usuario es propietario
+        UserDto user = userServiceClient.getUserById(userId);
+        if (!"ADMINISTRADOR".equals(user.getRole())) {
+            throw new UnauthorizedException("Solo los Administradores pueden crear restaurantes");
+        }
 
         validateRol(restaurant);
         validateNit(restaurant);
@@ -45,7 +63,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         UserDto owner = userServiceClient.getUserById(restaurant.getUserId());
 
         if (!owner.getRole().equals(ownerRoleName)) {
-            throw new InvalidOwnerException("El usuario no tiene el rol de propietario");
+            throw new InvalidOwnerException("El ID del usuario no tiene el rol de propietario");
         }
 
 

@@ -5,6 +5,7 @@ import com.plaza.plazoleta.domain.service.RestaurantService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,6 +19,7 @@ public class RestaurantController {
     private RestaurantService restaurantService;
 
     @PostMapping
+    @PreAuthorize(("hasRole('ADMINISTRADOR')"))
     public ResponseEntity<Restaurant> createRestaurant(@RequestBody Restaurant restaurant) {
 
         Restaurant createdRestaurant = restaurantService.createRestaurant(restaurant);

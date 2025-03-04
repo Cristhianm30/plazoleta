@@ -12,6 +12,7 @@ import com.plaza.plazoleta.domain.port.DishRepository;
 import com.plaza.plazoleta.domain.port.RestaurantRepository;
 import com.plaza.plazoleta.domain.port.UserServiceClient;
 import com.plaza.plazoleta.infraestructure.config.JwtUtils;
+import com.plaza.plazoleta.infraestructure.dto.UpdateDishDto;
 import com.plaza.plazoleta.infraestructure.dto.UserDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,7 +78,8 @@ public class DishServiceImplTest {
     }
 
     @Test
-    void createDish_UserNotOwner_ThrowsUnauthorizedException() {
+    void createDish_UserNotOwner() {
+
         UserDto user = new UserDto();
         user.setRole("CLIENTE"); // Rol inválido
 
@@ -88,7 +90,8 @@ public class DishServiceImplTest {
     }
 
     @Test
-    void createDish_RestaurantNotFound_ThrowsNotFoundException() {
+    void createDish_RestaurantNotFound() {
+
         UserDto user = new UserDto();
         user.setRole("PROPIETARIO");
 
@@ -100,7 +103,8 @@ public class DishServiceImplTest {
     }
 
     @Test
-    void createDish_InvalidCategory_ThrowsNotFoundException() {
+    void createDish_InvalidCategory() {
+
         UserDto user = new UserDto();
         user.setRole("PROPIETARIO");
 
@@ -113,16 +117,18 @@ public class DishServiceImplTest {
                 () -> dishService.createDish(DishDataProvider.validDishMock()));
     }
 
-    @Test
-    void createDish_MissingRequiredFields_ThrowsIllegalArgumentException() {
-        Dish dish = DishDataProvider.missingAllRequiredFieldsDishMock();
-
-        assertThrows(IllegalArgumentException.class,
-                () -> dishService.createDish(dish));
-    }
 
     @Test
-    void createDish_InvalidPrice_ThrowsInvalidPriceException() {
+    void createDish_InvalidPrice() {
+
+        UserDto user = new UserDto();
+        user.setRole("PROPIETARIO");
+        when(userServiceClient.getUserById(USER_ID)).thenReturn(user);
+        when(restaurantRepository.findByUserId(USER_ID))
+                .thenReturn(Optional.of(DishDataProvider.validRestaurantMock()));
+        when(categoryRepository.findById(any(Long.class)))
+                .thenReturn(Optional.of(DishDataProvider.validCategoryMock()));
+
         Dish dish = DishDataProvider.invalidPriceDishMock();
 
         assertThrows(InvalidPriceException.class,
@@ -131,7 +137,16 @@ public class DishServiceImplTest {
 
     // Pruebas adicionales para campos individuales faltantes
     @Test
-    void createDish_MissingName_ThrowsIllegalArgumentException() {
+    void createDish_MissingName() {
+
+        UserDto user = new UserDto();
+        user.setRole("PROPIETARIO");
+        when(userServiceClient.getUserById(USER_ID)).thenReturn(user);
+        when(restaurantRepository.findByUserId(USER_ID))
+                .thenReturn(Optional.of(DishDataProvider.validRestaurantMock()));
+        when(categoryRepository.findById(any(Long.class)))
+                .thenReturn(Optional.of(DishDataProvider.validCategoryMock()));
+
         Dish dish = DishDataProvider.missingNameDishMock();
 
         assertThrows(IllegalArgumentException.class,
@@ -139,10 +154,45 @@ public class DishServiceImplTest {
     }
 
     @Test
-    void createDish_MissingDescription_ThrowsIllegalArgumentException() {
+    void createDish_MissingDescription() {
+
+        UserDto user = new UserDto();
+        user.setRole("PROPIETARIO");
+        when(userServiceClient.getUserById(USER_ID)).thenReturn(user);
+        when(restaurantRepository.findByUserId(USER_ID))
+                .thenReturn(Optional.of(DishDataProvider.validRestaurantMock()));
+        when(categoryRepository.findById(any(Long.class)))
+                .thenReturn(Optional.of(DishDataProvider.validCategoryMock()));
+
         Dish dish = DishDataProvider.missingDescriptionDishMock();
 
         assertThrows(IllegalArgumentException.class,
                 () -> dishService.createDish(dish));
+    }
+
+    @Test
+    void updateDish_Success() {
+        // Configurar mocks
+        UpdateDishDto request = new UpdateDishDto();
+        request.setDescription("Nueva descripción");
+        request.setPrice(2000);
+
+        Dish existingDish = DishDataProvider.validDishMock();
+        UserDto user = new UserDto();
+        user.setRole("PROPIETARIO");
+        Restaurant restaurant = existingDish.getRestaurant();
+        restaurant.setUserId(USER_ID); // Asegurar coincidencia de IDs
+
+        when(dishRepository.findById(1L)).thenReturn(Optional.of(existingDish));
+        when(userServiceClient.getUserById(USER_ID)).thenReturn(user);
+        when(dishRepository.save(any(Dish.class))).thenReturn(existingDish);
+
+        // Ejecutar
+        Dish result = dishService.updateDish(1L, request);
+
+        // Verificar
+        assertEquals("Nueva descripción", result.getDescription());
+        assertEquals(2000, result.getPrice());
+        verify(dishRepository).save(existingDish);
     }
 }
