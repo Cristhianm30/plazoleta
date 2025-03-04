@@ -19,7 +19,7 @@ public class RestaurantController {
     private RestaurantService restaurantService;
 
     @PostMapping
-    @PreAuthorize(("hasRole('ADMINISTRADOR')"))
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Restaurant> createRestaurant(@RequestBody Restaurant restaurant) {
 
         Restaurant createdRestaurant = restaurantService.createRestaurant(restaurant);
